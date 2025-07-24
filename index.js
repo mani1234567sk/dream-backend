@@ -106,6 +106,49 @@ const initializeData = async () => {
       await News.insertMany(sampleNews);
       console.log('Sample news created');
     }
+
+    // Initialize sample matches if none exist
+    const Match = require('./models/Match');
+    const matchCount = await Match.countDocuments();
+    if (matchCount === 0) {
+      // Get admin user for sample matches
+      const adminUser = await User.findOne({ email: 'admin@dreamarena.com' });
+      if (adminUser) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+
+        const sampleMatches = [
+          {
+            name: 'Friday Night Football',
+            date: tomorrow,
+            time: '19:00',
+            location: 'Dream Arena Stadium',
+            matchType: '11v11',
+            maxPlayers: 22,
+            creator: adminUser._id,
+            description: 'Join us for an exciting Friday night match!',
+            joinedPlayers: []
+          },
+          {
+            name: 'Weekend Kickabout',
+            date: nextWeek,
+            time: '15:00',
+            location: 'Green Field Ground',
+            matchType: '7v7',
+            maxPlayers: 14,
+            creator: adminUser._id,
+            description: 'Casual weekend match for all skill levels.',
+            joinedPlayers: []
+          }
+        ];
+        
+        await Match.insertMany(sampleMatches);
+        console.log('Sample matches created');
+      }
+    }
   } catch (error) {
     console.error('Error initializing data:', error);
   }
