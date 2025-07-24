@@ -4,12 +4,14 @@ const User = require('../models/User');
 
 exports.getMatches = async (req, res) => {
   try {
+    console.log('Fetching matches from database...');
     const matches = await Match.find()
       .populate('creator', 'name email')
       .populate('joinedPlayers.user', 'name email')
       .sort({ date: 1, time: 1 })
       .select('-__v');
     
+    console.log(`Found ${matches.length} matches`);
     res.json(matches);
   } catch (error) {
     console.error('Error fetching matches:', error);
@@ -67,12 +69,7 @@ exports.createMatch = async (req, res) => {
       maxPlayers: matchTypeConfig[matchType],
       creator: userId,
       description: description || '',
-      joinedPlayers: [{
-        user: userId,
-        playerName: req.user.name || 'Creator',
-        teamName: '',
-        contactInfo: req.user.email || ''
-      }]
+      joinedPlayers: []
     });
 
     const populatedMatch = await Match.findById(match._id)
