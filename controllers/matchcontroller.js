@@ -21,8 +21,13 @@ exports.getMatches = async (req, res) => {
 
 exports.createMatch = async (req, res) => {
   try {
-    const { name, date, time, location, matchType, description } = req.body;
+    const { name, date, time, location, matchType, description, maxPlayers, maxTeams } = req.body;
     const userId = req.user.userId;
+
+    // Verify admin role (additional check)
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required to create matches' });
+    }
 
     // Validate required fields
     if (!name || !date || !time || !location || !matchType) {
@@ -31,7 +36,7 @@ exports.createMatch = async (req, res) => {
       });
     }
 
-    // Validate match type and set max players
+    // Validate match type and set default max players if not provided
     const matchTypeConfig = {
       '5v5': 10,
       '7v7': 14,
@@ -43,6 +48,9 @@ exports.createMatch = async (req, res) => {
         message: 'Invalid match type. Must be 5v5, 7v7, or 11v11' 
       });
     }
+
+    // Use provided maxPlayers or default based on match type
+    const finalMaxPlayers = maxPlayers && Number(maxPlayers) > 0 ? Number(maxPlayers) : matchTypeConfig[matchType];
 
     // Validate date
     const matchDate = new Date(date);
@@ -66,7 +74,8 @@ exports.createMatch = async (req, res) => {
       time,
       location,
       matchType,
-      maxPlayers: matchTypeConfig[matchType],
+      maxPlayers: finalMaxPlayers,
+      maxTeams: maxTeams || null,
       creator: userId,
       description: description || '',
       joinedPlayers: []
@@ -125,6 +134,12 @@ exports.joinMatch = async (req, res) => {
     // Check if match is still upcoming
     if (match.status !== 'upcoming') {
       return res.status(400).json({ message: 'Cannot join a match that is not upcoming' });
+    }
+
+    // Check if match date has passed
+    const matchDateTime = new Date(`${match.date.toISOString().split('T')[0]}T${match.time}:00`);
+    if (matchDateTime < new Date()) {
+      return res.status(400).json({ message: 'Cannot join a match that has already started or passed' });
     }
 
     // Add player to match
